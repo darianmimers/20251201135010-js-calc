@@ -14,85 +14,152 @@
             margin: 0;
             background-color: #f0f0f0;
         }
+
         .calculator {
             background-color: white;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 240px;
         }
-        input, button {
-            font-size: 20px;
+
+        #display {
+            width: 100%;
             padding: 10px;
-            margin: 5px;
-        }
-        input {
-            width: 160px;
+            font-size: 22px;
             text-align: right;
+            margin-bottom: 10px;
         }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
         button {
-            width: 50px;
+            font-size: 20px;
+            padding: 12px;
             background-color: #f1f1f1;
             border: 1px solid #ccc;
             cursor: pointer;
         }
+
         button:hover {
             background-color: #ddd;
+        }
+
+        .clear-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 12px;
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div class="calculator">
-        <input type="text" id="display" disabled />
-        
-        <div>
-            <button onclick="appendToDisplay('1')">1</button>
-            <button onclick="appendToDisplay('2')">2</button>
-            <button onclick="appendToDisplay('3')">3</button>
-            <button onclick="appendToDisplay('+')">+</button>
-        </div>
-        <div>
-            <button onclick="appendToDisplay('4')">4</button>
-            <button onclick="appendToDisplay('5')">5</button>
-            <button onclick="appendToDisplay('6')">6</button>
-            <button onclick="appendToDisplay('-')">-</button>
-        </div>
-        <div>
-            <button onclick="appendToDisplay('7')">7</button>
-            <button onclick="appendToDisplay('8')">8</button>
-            <button onclick="appendToDisplay('9')">9</button>
-            <button onclick="appendToDisplay('*')">*</button>
-        </div>
-        <div>
-            <button onclick="appendToDisplay('0')">0</button>
-            <button onclick="appendToDisplay('.')">.</button>
-            <button onclick="calculate()">=</button>
-            <button onclick="appendToDisplay('/')">/</button>
-        </div>
-        <div>
-            <button onclick="clearDisplay()" style="width: 220px;">Clear</button>
-        </div>
+<div class="calculator">
+    <input type="text" id="display" disabled />
+
+    <div class="buttons">
+        <button onclick="appendToDisplay('1')">1</button>
+        <button onclick="appendToDisplay('2')">2</button>
+        <button onclick="appendToDisplay('3')">3</button>
+        <button onclick="appendToDisplay('+')">+</button>
+
+        <button onclick="appendToDisplay('4')">4</button>
+        <button onclick="appendToDisplay('5')">5</button>
+        <button onclick="appendToDisplay('6')">6</button>
+        <button onclick="appendToDisplay('-')">-</button>
+
+        <button onclick="appendToDisplay('7')">7</button>
+        <button onclick="appendToDisplay('8')">8</button>
+        <button onclick="appendToDisplay('9')">9</button>
+        <button onclick="appendToDisplay('*')">*</button>
+
+        <button onclick="appendToDisplay('0')">0</button>
+        <button onclick="appendToDisplay('.')">.</button>
+        <button onclick="calculate()">=</button>
+        <button onclick="appendToDisplay('/')">/</button>
     </div>
 
-    <script>
-        function appendToDisplay(value) {
-            const display = document.getElementById('display');
-            display.value += value;
-        }
+    <button class="clear-btn" onclick="clearDisplay()">Clear</button>
+</div>
 
-        function clearDisplay() {
-            document.getElementById('display').value = '';
-        }
+<script>
+    function appendToDisplay(value) {
+        document.getElementById('display').value += value;
+    }
 
-        function calculate() {
-            const display = document.getElementById('display');
-            try {
-                display.value = eval(display.value);
-            } catch (e) {
-                display.value = 'Error';
+    function clearDisplay() {
+        document.getElementById('display').value = '';
+    }
+
+    // ---- Custom calculation logic (no eval) ----
+    function calculate() {
+        const display = document.getElementById('display');
+        const expr = display.value.trim();
+
+        try {
+            if (!expr) {
+                display.value = "Error: Empty input";
+                return;
+            }
+            display.value = computeExpression(expr);
+        } catch (e) {
+            display.value = "Error: Invalid expression";
+        }
+    }
+
+    function computeExpression(expr) {
+        // Remove all spaces
+        expr = expr.replace(/\s+/g, '');
+
+        // Split numbers and operators
+        const tokens = expr.match(/(\d+(\.\d+)?)|[\+\-\*\/]/g);
+        if (!tokens) throw new Error("Invalid expression");
+
+        // First pass: handle * and /
+        let arr = [];
+        let i = 0;
+
+        while (i < tokens.length) {
+            let token = tokens[i];
+
+            if (token === "*" || token === "/") {
+                let prev = parseFloat(arr.pop());
+                let next = parseFloat(tokens[i + 1]);
+
+                let result;
+                if (token === "*") result = prev * next;
+                else result = prev / next;
+
+                arr.push(result.toString());
+                i += 2;
+            } else {
+                arr.push(token);
+                i++;
             }
         }
-    </script>
+
+        // Second pass: handle + and -
+        let result = parseFloat(arr[0]);
+        i = 1;
+
+        while (i < arr.length) {
+            let op = arr[i];
+            let num = parseFloat(arr[i + 1]);
+
+            if (op === "+") result += num;
+            else if (op === "-") result -= num;
+
+            i += 2;
+        }
+
+        return result;
+    }
+</script>
 
 </body>
 </html>
