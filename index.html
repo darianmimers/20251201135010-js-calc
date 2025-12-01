@@ -147,10 +147,8 @@
     // ================================
 
     function computeExpression(expr) {
-        // Remove spaces
-        expr = expr.replace(/\s+/g, '');
+        expr = expr.replace(/\s+/g, "");
 
-        // Recursive parser
         function parse(str, start = 0) {
             let tokens = [];
             let numBuffer = "";
@@ -164,42 +162,60 @@
                 }
                 else if (ch === "(") {
                     const result = parse(str, i + 1);
+
+                    if (result.error) return result;
+
                     numBuffer = result.value.toString();
                     i = result.pos;
                 }
                 else if (ch === ")") {
-                    if (numBuffer.length > 0) {
-                        tokens.push(numBuffer);
-                        numBuffer = "";
-                    }
+                    if (start === 0) return { error: "Unexpected ')'" };
+
+                    if (numBuffer.length === 0 && tokens.length === 0)
+                        return { error: "Invalid expression" }; // empty () or similar
+
+                    if (numBuffer.length > 0) tokens.push(numBuffer);
+
                     return { value: evalTokens(tokens), pos: i };
                 }
                 else if ("+-*/".includes(ch)) {
-                    if (numBuffer.length === 0) throw new Error("Invalid syntax");
+                    if (numBuffer.length === 0)
+                        return { error: "Invalid expression" }; // operator without number
+
                     tokens.push(numBuffer);
                     tokens.push(ch);
                     numBuffer = "";
                 }
                 else {
-                    throw new Error("Invalid character: " + ch);
+                    return { error: "Invalid character: " + ch };
                 }
 
                 i++;
             }
 
-            if (numBuffer.length > 0) tokens.push(numBuffer);
+            if (start !== 0)
+                return { error: "Invalid expression" }; // missing closing parenthesis
+
+            // finish root level
+            if (numBuffer.length > 0) {
+                tokens.push(numBuffer);
+            } else if (
+                tokens.length > 0 &&
+                "+-*/".includes(tokens[tokens.length - 1])
+            ) {
+                return { error: "Invalid expression" }; // expression ends with operator
+            }
 
             return { value: evalTokens(tokens), pos: i };
         }
 
-        // Evaluate token list
         function evalTokens(tokens) {
             if (!tokens.length) throw new Error("Invalid expression");
 
-            // Phase 1: * and /
             let arr = [];
             let i = 0;
 
+            // * and /
             while (i < tokens.length) {
                 let token = tokens[i];
 
@@ -207,9 +223,11 @@
                     let prev = parseFloat(arr.pop());
                     let next = parseFloat(tokens[i + 1]);
 
-                    if (token === "/" && next === 0) {
+                    if (isNaN(prev) || isNaN(next))
+                        throw new Error("Invalid expression");
+
+                    if (token === "/" && next === 0)
                         throw new Error("Division by zero");
-                    }
 
                     let result = token === "*" ? prev * next : prev / next;
                     arr.push(result.toString());
@@ -220,13 +238,15 @@
                 }
             }
 
-            // Phase 2: + and -
+            // + and -
             let result = parseFloat(arr[0]);
-            i = 1;
+            if (isNaN(result)) throw new Error("Invalid expression");
 
+            i = 1;
             while (i < arr.length) {
                 let op = arr[i];
                 let num = parseFloat(arr[i + 1]);
+                if (isNaN(num)) throw new Error("Invalid expression");
 
                 if (op === "+") result += num;
                 else if (op === "-") result -= num;
@@ -237,7 +257,13 @@
             return result;
         }
 
-        return parse(expr).value;
+        const result = parse(expr);
+
+        if (result.error) throw new Error(result.error);
+        if (result.pos !== expr.length)
+            throw new Error("Invalid expression");
+
+        return result.value;
     }
 
 </script>
