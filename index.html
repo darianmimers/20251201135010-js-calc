@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Calculator</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -20,7 +21,7 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            width: 240px;
+            width: 260px;
         }
 
         #display {
@@ -60,7 +61,6 @@
             font-size: 20px;
         }
 
-        /* Error styling */
         .error {
             border-color: red;
             color: red;
@@ -92,8 +92,11 @@
         <button onclick="appendToDisplay('.')">.</button>
         <button onclick="clearDisplay()">C</button>
         <button onclick="appendToDisplay('/')">/</button>
+
+        <button onclick="appendToDisplay('(')">(</button>
+        <button onclick="appendToDisplay(')')">)</button>
     </div>
-    
+
     <button class="calc-btn" onclick="calculate()">=</button>
 </div>
 
@@ -116,7 +119,6 @@
         display.style.color = 'black';
     }
 
-    // ---- Custom calculation logic (no eval) ----
     function calculate() {
         const display = document.getElementById('display');
         const expr = display.value.trim();
@@ -140,57 +142,104 @@
         display.style.color = 'red';
     }
 
+    // ================================
+    // Expression evaluation with parentheses
+    // ================================
+
     function computeExpression(expr) {
-        // Remove all spaces
+        // Remove spaces
         expr = expr.replace(/\s+/g, '');
 
-        // Split numbers and operators
-        const tokens = expr.match(/(\d+(\.\d+)?)|[\+\-\*\/]/g);
-        if (!tokens) throw new Error("Invalid expression");
+        // Recursive parser
+        function parse(str, start = 0) {
+            let tokens = [];
+            let numBuffer = "";
+            let i = start;
 
-        // First pass: handle * and /
-        let arr = [];
-        let i = 0;
+            while (i < str.length) {
+                const ch = str[i];
 
-        while (i < tokens.length) {
-            let token = tokens[i];
-
-            if (token === "*" || token === "/") {
-                let prev = parseFloat(arr.pop());
-                let next = parseFloat(tokens[i + 1]);
-
-                if (token === "/" && next === 0) {
-                    throw new Error("Cannot divide by zero");
+                if (/\d|\./.test(ch)) {
+                    numBuffer += ch;
+                }
+                else if (ch === "(") {
+                    const result = parse(str, i + 1);
+                    numBuffer = result.value.toString();
+                    i = result.pos;
+                }
+                else if (ch === ")") {
+                    if (numBuffer.length > 0) {
+                        tokens.push(numBuffer);
+                        numBuffer = "";
+                    }
+                    return { value: evalTokens(tokens), pos: i };
+                }
+                else if ("+-*/".includes(ch)) {
+                    if (numBuffer.length === 0) throw new Error("Invalid syntax");
+                    tokens.push(numBuffer);
+                    tokens.push(ch);
+                    numBuffer = "";
+                }
+                else {
+                    throw new Error("Invalid character: " + ch);
                 }
 
-                let result;
-                if (token === "*") result = prev * next;
-                else result = prev / next;
-
-                arr.push(result.toString());
-                i += 2;
-            } else {
-                arr.push(token);
                 i++;
             }
+
+            if (numBuffer.length > 0) tokens.push(numBuffer);
+
+            return { value: evalTokens(tokens), pos: i };
         }
 
-        // Second pass: handle + and -
-        let result = parseFloat(arr[0]);
-        i = 1;
+        // Evaluate token list
+        function evalTokens(tokens) {
+            if (!tokens.length) throw new Error("Invalid expression");
 
-        while (i < arr.length) {
-            let op = arr[i];
-            let num = parseFloat(arr[i + 1]);
+            // Phase 1: * and /
+            let arr = [];
+            let i = 0;
 
-            if (op === "+") result += num;
-            else if (op === "-") result -= num;
+            while (i < tokens.length) {
+                let token = tokens[i];
 
-            i += 2;
+                if (token === "*" || token === "/") {
+                    let prev = parseFloat(arr.pop());
+                    let next = parseFloat(tokens[i + 1]);
+
+                    if (token === "/" && next === 0) {
+                        throw new Error("Division by zero");
+                    }
+
+                    let result = token === "*" ? prev * next : prev / next;
+                    arr.push(result.toString());
+                    i += 2;
+                } else {
+                    arr.push(token);
+                    i++;
+                }
+            }
+
+            // Phase 2: + and -
+            let result = parseFloat(arr[0]);
+            i = 1;
+
+            while (i < arr.length) {
+                let op = arr[i];
+                let num = parseFloat(arr[i + 1]);
+
+                if (op === "+") result += num;
+                else if (op === "-") result -= num;
+
+                i += 2;
+            }
+
+            return result;
         }
 
-        return result;
+        return parse(expr).value;
     }
+
 </script>
 
 </body>
