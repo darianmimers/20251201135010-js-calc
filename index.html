@@ -43,11 +43,9 @@
 <body>
 
     <div class="calculator">
-        <!-- Input field for display -->
         <input type="text" id="display" disabled />
         
         <div>
-            <!-- Buttons for numbers and operators -->
             <button onclick="appendToDisplay('1')">1</button>
             <button onclick="appendToDisplay('2')">2</button>
             <button onclick="appendToDisplay('3')">3</button>
@@ -67,30 +65,29 @@
         </div>
         <div>
             <button onclick="appendToDisplay('0')">0</button>
-            <button onclick="clearDisplay()">C</button>
+            <button onclick="appendToDisplay('.')">.</button>
             <button onclick="calculate()">=</button>
             <button onclick="appendToDisplay('/')">/</button>
+        </div>
+        <div>
+            <button onclick="clearDisplay()" style="width: 220px;">Clear</button>
         </div>
     </div>
 
     <script>
-        // Function to append clicked button to display
         function appendToDisplay(value) {
             const display = document.getElementById('display');
             display.value += value;
         }
 
-        // Function to clear the display
         function clearDisplay() {
-            const display = document.getElementById('display');
-            display.value = '';
+            document.getElementById('display').value = '';
         }
 
-        // Function to calculate the result
         function calculate() {
             const display = document.getElementById('display');
             try {
-                display.value = eval(display.value); // Using eval to evaluate the expression
+                display.value = eval(display.value);
             } catch (e) {
                 display.value = 'Error';
             }
